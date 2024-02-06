@@ -1,0 +1,5 @@
+[mqtt]
+id = "nordpool-mqtt"
+host = "localhost"
+port = 1883
+topic = "home/sensors/nordpool/price"
