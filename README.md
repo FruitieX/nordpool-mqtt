@@ -39,9 +39,10 @@ For historic reasons I'm including some redundant fields in the published JSON, 
 
 ```
 {
-  "id":"nordpool-mqtt",
-  "name":"nordpool-mqtt",
-  "price":19.219,
-  "sensor_value":19.219,"start_date":"2024-02-06T18:00:00+00:00"
+  "id": "nordpool-mqtt",
+  "name": "nordpool-mqtt",
+  "price": 19.219,
+  "sensor_value": 19.219,
+  "start_date": "2024-02-06T18:00:00+00:00"
 }
 ```
