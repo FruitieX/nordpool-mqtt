@@ -1,4 +1,4 @@
-use chrono::{Duration, Timelike, Utc};
+use chrono::{Duration, DurationRound, Utc};
 use croner::Cron;
 use eyre::{eyre, Result};
 
@@ -31,24 +31,19 @@ impl State {
             self.initial_run = false;
 
             // At initial run, we should publish the current hour's price immediately
-            self.cron
-                .find_next_occurrence(&(Utc::now().with_minute(0).unwrap()), true)
-                .expect("Could not find next occurrence that matches the cron pattern")
+            Utc::now().duration_trunc(Duration::hours(1))?
         } else {
             // At subsequent runs, we should wait until the next hour and then publish the price
             let next = self
                 .cron
-                .find_next_occurrence(&(Utc::now() + Duration::minutes(1)), false)
+                .find_next_occurrence(&(Utc::now() + Duration::seconds(1)), false)
                 .expect("Could not find next occurrence that matches the cron pattern");
 
             let wait_duration = next - Utc::now();
 
             if wait_duration.num_seconds() > 0 {
                 debug!("Waiting until next hour: {next}");
-                tokio::time::sleep(tokio::time::Duration::from_secs(
-                    wait_duration.num_seconds() as u64,
-                ))
-                .await;
+                tokio::time::sleep(wait_duration.to_std()?).await;
             }
 
             next
