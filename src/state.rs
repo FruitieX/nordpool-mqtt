@@ -69,8 +69,8 @@ impl State {
             .ok_or_else(|| eyre!("Could not find price for current hour"))?;
 
         let json = serde_json::json!({
-            "id": self.config.id,
-            "name": self.config.id,
+            "id": "price",
+            "name": "price",
             "price": price.price,
             "start_date": price.start_date.to_rfc3339(),
             "sensor_value": price.price,
