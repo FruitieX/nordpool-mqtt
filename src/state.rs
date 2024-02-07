@@ -1,4 +1,4 @@
-use chrono::{Duration, DurationRound, Utc};
+use chrono::{DateTime, Duration, DurationRound, Utc};
 use croner::Cron;
 use eyre::{eyre, Result};
 
@@ -10,6 +10,8 @@ use crate::{
 pub struct State {
     pub config: MqttConfig,
     pub cron: Cron,
+    /// start_date of previously published price
+    pub prev_price_t: DateTime<Utc>,
     pub mqtt_client: rumqttc::AsyncClient,
     pub prices: Vec<SpotPrice>,
     pub initial_run: bool,
@@ -20,6 +22,7 @@ impl State {
         Self {
             config,
             cron,
+            prev_price_t: Utc::now(),
             mqtt_client,
             prices: Default::default(),
             initial_run: true,
@@ -36,7 +39,7 @@ impl State {
             // At subsequent runs, we should wait until the next hour and then publish the price
             let next = self
                 .cron
-                .find_next_occurrence(&(Utc::now() + Duration::seconds(1)), false)
+                .find_next_occurrence(&self.prev_price_t, false)
                 .expect("Could not find next occurrence that matches the cron pattern");
 
             let wait_duration = next - Utc::now();
@@ -49,6 +52,7 @@ impl State {
             next
         };
 
+        self.prev_price_t = t;
         let remaining_prices = self.prices.iter().filter(|p| t <= p.start_date).count();
 
         // Nordpool releases their prices around 13:00 CET, if there are less than 5
