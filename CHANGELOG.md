@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/FruitieX/nordpool-mqtt/compare/v0.1.2...v0.1.3) (2024-02-07)
+
+
+### Bug Fixes
+
+* hardcode id and name fields ([2e83dd3](https://github.com/FruitieX/nordpool-mqtt/commit/2e83dd3acf895a1a78927c9c5cf33789b53f9d29))
+
 ## [0.1.2](https://github.com/FruitieX/nordpool-mqtt/compare/v0.1.1...v0.1.2) (2024-02-07)
 
 
