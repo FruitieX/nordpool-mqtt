@@ -1,5 +1,11 @@
 [mqtt]
 id = "nordpool-mqtt"
-host = "localhost"
+host = "mqtt.fruitiex.org"
 port = 1883
-topic = "home/sensors/nordpool/price"
+topic = "test/sensors/nordpool/price"
+
+[influxdb2]
+host = "influxdb.fruitiex.org"
+org = "influxdata"
+token = "INFLUXDB2_TOKEN_WITH_WRITE_PERMISSIONS"
+bucket = "nordpool"

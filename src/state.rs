@@ -4,11 +4,12 @@ use eyre::{eyre, Result};
 
 use crate::{
     api::{fetch_prices, SpotPrice},
-    config::MqttConfig,
+    config::Config,
+    influxdb2::publish_to_influxdb2,
 };
 
 pub struct State {
-    pub config: MqttConfig,
+    pub config: Config,
     pub cron: Cron,
     /// start_date of previously published price
     pub prev_price_t: DateTime<Utc>,
@@ -18,7 +19,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(config: MqttConfig, cron: Cron, mqtt_client: rumqttc::AsyncClient) -> Self {
+    pub fn new(config: Config, cron: Cron, mqtt_client: rumqttc::AsyncClient) -> Self {
         Self {
             config,
             cron,
@@ -55,11 +56,26 @@ impl State {
         self.prev_price_t = t;
         let remaining_prices = self.prices.iter().filter(|p| t <= p.start_date).count();
 
-        // Nordpool releases their prices around 13:00 CET, if there are less than 5
-        // prices left the clock should now be 19:00 or 20:00 CET depending on DST
-        if remaining_prices < 5 {
+        // Nordpool releases their prices around 13:00 CET, if there are 10 or
+        // fewer prices left in the list, we should check if new prices have
+        // been published
+        let fetched_new_prices = if remaining_prices <= 10 {
             info!("Fetching prices");
             self.prices = fetch_prices().await?;
+            self.prices.iter().filter(|p| t <= p.start_date).count() > remaining_prices
+        } else {
+            false
+        };
+
+        // Publish new prices to InfluxDB
+        if fetched_new_prices {
+            if let Some(config) = &self.config.influxdb2 {
+                let config = config.clone();
+                let prices = self.prices.clone();
+                tokio::spawn(async move {
+                    let _ = publish_to_influxdb2(&prices, &config).await;
+                });
+            }
         }
 
         let price = self
@@ -80,7 +96,7 @@ impl State {
 
         self.mqtt_client
             .publish(
-                self.config.topic.clone(),
+                self.config.mqtt.topic.clone(),
                 rumqttc::QoS::AtLeastOnce,
                 true,
                 json.to_string(),

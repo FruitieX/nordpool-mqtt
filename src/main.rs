@@ -10,6 +10,7 @@ extern crate log;
 
 mod api;
 mod config;
+mod influxdb2;
 mod mqtt;
 mod state;
 

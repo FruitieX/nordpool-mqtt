@@ -3,7 +3,7 @@ use eyre::Result;
 use reqwest::Client;
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SpotPrice {
     pub price: f64,

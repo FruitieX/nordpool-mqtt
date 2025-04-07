@@ -9,12 +9,21 @@ pub struct MqttConfig {
     pub topic: String,
 }
 
+#[derive(Deserialize, Debug, Clone)]
+pub struct InfluxDB2Config {
+    pub host: String,
+    pub org: String,
+    pub token: String,
+    pub bucket: String,
+}
+
 #[derive(Deserialize, Debug)]
 pub struct Config {
     pub mqtt: MqttConfig,
+    pub influxdb2: Option<InfluxDB2Config>,
 }
 
-pub fn read_config() -> Result<MqttConfig> {
+pub fn read_config() -> Result<Config> {
     let builder = config::Config::builder();
 
     let root = std::env::current_dir().unwrap();
@@ -35,7 +44,5 @@ pub fn read_config() -> Result<MqttConfig> {
         "Failed to deserialize config, compare your config file to Settings.toml.example!"
     ))?;
 
-    let mqtt_config = config.mqtt;
-
-    Ok(mqtt_config)
+    Ok(config)
 }
