@@ -9,7 +9,7 @@ edition = "2021"
 chrono = { version = "=0.4.42", features = ["serde"] }
 color-eyre = "=0.6.5"
 config = "=0.15.18"
-croner = "=2.2.0"
+croner = "=3.0.1"
 eyre = "=0.6.12"
 futures = "=0.3.31"
 influxdb2 = { version = "=0.5.2", default-features = false, features = [
