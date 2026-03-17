@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 chrono = { version = "=0.4.44", features = ["serde"] }
 color-eyre = "=0.6.5"
-config = "=0.15.21"
+config = "=0.15.22"
 croner = "=2.2.0"
 eyre = "=0.6.12"
 futures = "=0.3.32"
