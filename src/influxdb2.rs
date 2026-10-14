@@ -25,19 +25,13 @@ pub async fn publish_to_influxdb2(prices: &[SpotPrice], config: &InfluxDB2Config
         })
         .collect();
 
-    let result = client
+    client
         .write_with_precision(
             &config.bucket,
             stream::iter(points?),
             TimestampPrecision::Milliseconds,
         )
-        .await;
-
-    if let Err(e) = result {
-        error!("Error writing to InfluxDB: {}", e);
-    } else {
-        info!("Successfully wrote to InfluxDB");
-    }
+        .await?;
 
     Ok(())
 }

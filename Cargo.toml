@@ -7,9 +7,9 @@ edition = "2021"
 
 [dependencies]
 chrono = { version = "=0.4.45", features = ["serde"] }
+chrono-tz = { version = "=0.10.4", default-features = false, features = ["std"] }
 color-eyre = "=0.6.5"
 config = "=0.15.27"
-croner = "=2.2.0"
 eyre = "=0.6.14"
 futures = "=0.3.34"
 influxdb2 = { version = "=0.5.2", default-features = false, features = [

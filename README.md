@@ -1,12 +1,29 @@
 # nordpool-mqtt
 
-This program reads current Finnish electricity exchange prices from https://porssisahko.net/api and publishes them to an MQTT broker.
+This program reads day-ahead electricity prices from the [Nord Pool](https://data.nordpoolgroup.com/) data portal API and publishes the current price to an MQTT broker.
+
+Prices are published as cents per kWh (or 1/100 of the configured currency) with VAT included. With the default settings (area `FI`, 60 minute resolution, 25.5% VAT) the values are identical to what https://porssisahko.net/api reports.
+
+## How it works
+
+- On startup, today's prices are fetched (retrying with backoff until that succeeds), and the current price is published right away.
+- A new price is published at the start of every price period (every hour, or every 15 minutes with `resolution_minutes = 15`).
+- From `prices.poll_start` (12:00 CET by default) onwards, the API is polled every `prices.poll_interval_secs` (60 s by default) until the next day's final prices are available. Nord Pool usually publishes them around 12:45 CET.
+- The latest price is republished whenever the MQTT connection is (re-)established, so the retained message survives broker restarts.
+- If prices change (e.g. preliminary prices getting corrected), the new prices are fetched and published.
+- New prices are optionally written to InfluxDB 2.
+
+Set `RUST_LOG` to adjust log verbosity (defaults to `info`).
 
 ## Setup
 
+### Development
+
+Run `nix develop` (or use direnv) to get a shell with the Rust toolchain.
+
 ### Quick start
 
-- Copy `Settings.example.toml` to `Settings.toml`.
+- Copy `Settings.toml.example` to `Settings.toml`.
 - Edit `Settings.toml` with values matching your setup.
 
 ### Setting Up Mosquitto
@@ -43,6 +60,7 @@ For historic reasons I'm including some redundant fields in the published JSON, 
   "name": "nordpool-mqtt",
   "price": 19.219,
   "sensor_value": 19.219,
-  "start_date": "2024-02-06T18:00:00+00:00"
+  "start_date": "2024-02-06T18:00:00+00:00",
+  "end_date": "2024-02-06T19:00:00+00:00"
 }
 ```

@@ -5,7 +5,19 @@ port = 1883
 topic = "test/sensors/nordpool/price"
 
 [influxdb2]
-host = "influxdb.fruitiex.org"
+host = "https://influxdb.fruitiex.org"
 org = "influxdata"
 token = "INFLUXDB2_TOKEN_WITH_WRITE_PERMISSIONS"
 bucket = "nordpool"
+
+# Optional, these are the defaults
+[prices]
+# Nord Pool delivery area and currency
+area = "FI"
+currency = "EUR"
+# 60 publishes hourly average prices, 15 publishes quarter-hourly prices
+resolution_minutes = 60
+vat_percent = 25.5
+# Time of day (CET/CEST) to start polling for the next day's prices
+poll_start = "12:00:00"
+poll_interval_secs = 60
