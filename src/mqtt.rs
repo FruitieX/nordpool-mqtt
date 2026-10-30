@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use crate::config::MqttConfig;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{distr::Alphanumeric, RngExt};
 use rumqttc::{AsyncClient, Event, MqttOptions, Packet, QoS};
 use tokio::task::JoinHandle;
 
@@ -32,8 +32,8 @@ fn try_publish(client: &AsyncClient, topic: &str, payload: String) {
 }
 
 pub fn init_mqtt(config: &MqttConfig) -> (Mqtt, JoinHandle<()>) {
-    let random_string: String = rand::thread_rng()
-        .sample_iter(&Alphanumeric)
+    let random_string: String = rand::rng()
+        .sample_iter(Alphanumeric)
         .take(8)
         .map(char::from)
         .collect();
