@@ -132,6 +132,25 @@ mod tests {
     use super::*;
 
     #[test]
+    fn client_builds() {
+        // Catches TLS backend / crypto provider misconfiguration, which
+        // reqwest only reports when building the client.
+        NordpoolClient::new(PricesConfig::default()).unwrap();
+    }
+
+    /// Talks to the real Nord Pool API, run with `cargo test -- --ignored`.
+    #[tokio::test]
+    #[ignore]
+    async fn fetches_live_prices() {
+        let client = NordpoolClient::new(PricesConfig::default()).unwrap();
+        let today = Utc::now().date_naive();
+
+        let day = client.fetch_day(today).await.unwrap().unwrap();
+
+        assert!(!day.prices.is_empty());
+    }
+
+    #[test]
     fn parses_published_day() {
         let body: Response = serde_json::from_str(
             r#"{

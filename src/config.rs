@@ -78,7 +78,10 @@ pub fn read_config() -> Result<Config> {
             .wrap_err_with(|| format!("Failed to copy {sample_path:?} to {path:?}"))?;
     }
 
-    let builder = builder.add_source(config::File::with_name("Settings"));
+    parse_config(builder.add_source(config::File::with_name("Settings")))
+}
+
+fn parse_config(builder: config::ConfigBuilder<config::builder::DefaultState>) -> Result<Config> {
     let settings = builder.build()?;
 
     let mut config: Config = settings.try_deserialize().wrap_err(eyre!(
@@ -105,4 +108,88 @@ pub fn read_config() -> Result<Config> {
     }
 
     Ok(config)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(toml: &str) -> Result<Config> {
+        parse_config(
+            config::Config::builder()
+                .add_source(config::File::from_str(toml, config::FileFormat::Toml)),
+        )
+    }
+
+    #[test]
+    fn parses_example_config() {
+        let config = parse(include_str!("../Settings.toml.example")).unwrap();
+
+        assert_eq!(config.mqtt.id, "nordpool-mqtt");
+        assert_eq!(config.mqtt.port, 1883);
+        assert_eq!(config.influxdb2.unwrap().bucket, "nordpool");
+        assert_eq!(config.prices.area, "FI");
+        assert_eq!(config.prices.resolution_minutes, 60);
+        assert_eq!(
+            config.prices.poll_start,
+            NaiveTime::from_hms_opt(12, 0, 0).unwrap()
+        );
+    }
+
+    #[test]
+    fn prices_and_influxdb2_are_optional() {
+        let config = parse(
+            r#"
+            [mqtt]
+            id = "nordpool-mqtt"
+            host = "localhost"
+            port = 1883
+            topic = "sensors/nordpool/price"
+            "#,
+        )
+        .unwrap();
+
+        assert!(config.influxdb2.is_none());
+        assert_eq!(config.prices.vat_percent, 25.5);
+    }
+
+    #[test]
+    fn rejects_invalid_resolution() {
+        let result = parse(
+            r#"
+            [mqtt]
+            id = "nordpool-mqtt"
+            host = "localhost"
+            port = 1883
+            topic = "sensors/nordpool/price"
+
+            [prices]
+            resolution_minutes = 30
+            "#,
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn disables_influxdb2_with_invalid_host() {
+        let config = parse(
+            r#"
+            [mqtt]
+            id = "nordpool-mqtt"
+            host = "localhost"
+            port = 1883
+            topic = "sensors/nordpool/price"
+
+            [influxdb2]
+            host = "influxdb.example.com"
+            org = "org"
+            token = "token"
+            bucket = "bucket"
+            "#,
+        )
+        .unwrap();
+
+        assert!(config.influxdb2.is_none());
+    }
 }

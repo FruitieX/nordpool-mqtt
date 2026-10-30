@@ -31,18 +31,19 @@ fn try_publish(client: &AsyncClient, topic: &str, payload: String) {
     }
 }
 
-pub fn init_mqtt(config: &MqttConfig) -> (Mqtt, JoinHandle<()>) {
+/// Builds a unique MQTT client id by appending a random suffix to `id`.
+fn client_id(id: &str) -> String {
     let random_string: String = rand::rng()
         .sample_iter(Alphanumeric)
         .take(8)
         .map(char::from)
         .collect();
 
-    let mut options = MqttOptions::new(
-        format!("{}-{}", config.id, random_string),
-        config.host.clone(),
-        config.port,
-    );
+    format!("{id}-{random_string}")
+}
+
+pub fn init_mqtt(config: &MqttConfig) -> (Mqtt, JoinHandle<()>) {
+    let mut options = MqttOptions::new(client_id(&config.id), config.host.clone(), config.port);
     options.set_keep_alive(Duration::from_secs(15));
     let (client, mut eventloop) = AsyncClient::new(options, 10);
 
@@ -80,4 +81,22 @@ pub fn init_mqtt(config: &MqttConfig) -> (Mqtt, JoinHandle<()>) {
     });
 
     (mqtt, handle)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn client_id_has_random_suffix() {
+        let a = client_id("nordpool-mqtt");
+        let b = client_id("nordpool-mqtt");
+
+        assert!(a.starts_with("nordpool-mqtt-"));
+        assert_eq!(a.len(), "nordpool-mqtt-".len() + 8);
+        assert!(a["nordpool-mqtt-".len()..]
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric()));
+        assert_ne!(a, b);
+    }
 }
