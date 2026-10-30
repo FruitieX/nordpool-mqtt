@@ -45,6 +45,12 @@ fn client_id(id: &str) -> String {
 pub fn init_mqtt(config: &MqttConfig) -> (Mqtt, JoinHandle<()>) {
     let mut options = MqttOptions::new(client_id(&config.id), config.host.clone(), config.port);
     options.set_keep_alive(Duration::from_secs(15));
+    if let Some(username) = &config.username {
+        options.set_credentials(
+            username.clone(),
+            config.password.clone().unwrap_or_default(),
+        );
+    }
     let (client, mut eventloop) = AsyncClient::new(options, 10);
 
     let mqtt = Mqtt {

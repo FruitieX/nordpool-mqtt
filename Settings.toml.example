@@ -2,6 +2,10 @@
 id = "nordpool-mqtt"
 host = "mqtt.example.com"
 port = 1883
+
+# Optional broker credentials; leave out to connect anonymously
+# username = "example"
+# password = "secret"
 topic = "test/sensors/nordpool/price"
 
 [influxdb2]
