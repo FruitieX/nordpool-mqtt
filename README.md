@@ -11,7 +11,7 @@ Prices are published as cents per kWh (or 1/100 of the configured currency) with
 - From `prices.poll_start` (12:00 CET by default) onwards, the API is polled every `prices.poll_interval_secs` (60 s by default) until the next day's final prices are available. Nord Pool usually publishes them around 12:45 CET.
 - The latest price is republished whenever the MQTT connection is (re-)established, so the retained message survives broker restarts.
 - If prices change (e.g. preliminary prices getting corrected), the new prices are fetched and published.
-- New prices are optionally written to InfluxDB 2.
+- New prices are optionally written to InfluxDB 2, or to several InfluxDB v2 write endpoints (`[[influxdb2]]` once per target, e.g. InfluxDB plus a Telegraf `influxdb_v2_listener` in front of TimescaleDB). Each target is written independently.
 
 Set `RUST_LOG` to adjust log verbosity (defaults to `info`).
 

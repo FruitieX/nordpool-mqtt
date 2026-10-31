@@ -8,6 +8,9 @@ port = 1883
 # password = "secret"
 topic = "test/sensors/nordpool/price"
 
+# Optional InfluxDB 2 target for the prices (measurement "price", tag
+# id=price, field "price"). Use [[influxdb2]] once per target to write to
+# several, e.g. InfluxDB and a relay that speaks the InfluxDB v2 write API.
 [influxdb2]
 host = "https://influxdb.example.com"
 org = "influxdata"

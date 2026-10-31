@@ -127,13 +127,17 @@ pub async fn run_fetcher(config: Config, tx: watch::Sender<PriceStore>) -> eyre:
                             if is_final { "final" } else { "preliminary" },
                         );
 
-                        if let Some(influx_config) = config.influxdb2.clone() {
+                        // Each target on its own, so one being down doesn't
+                        // hold up or fail the others.
+                        for influx_config in config.influxdb2.iter().cloned() {
+                            let prices = day.prices.clone();
                             tokio::spawn(async move {
-                                let write = publish_to_influxdb2(&day.prices, &influx_config);
+                                let host = &influx_config.host;
+                                let write = publish_to_influxdb2(&prices, &influx_config);
                                 match tokio::time::timeout(Duration::from_secs(60), write).await {
-                                    Ok(Ok(())) => info!("Successfully wrote to InfluxDB"),
-                                    Ok(Err(e)) => error!("Error writing to InfluxDB: {e:#}"),
-                                    Err(_) => error!("Timed out writing to InfluxDB"),
+                                    Ok(Ok(())) => info!("Successfully wrote to InfluxDB {host}"),
+                                    Ok(Err(e)) => error!("Error writing to InfluxDB {host}: {e:#}"),
+                                    Err(_) => error!("Timed out writing to InfluxDB {host}"),
                                 }
                             });
                         }

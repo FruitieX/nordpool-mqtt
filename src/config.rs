@@ -1,6 +1,6 @@
 use chrono::NaiveTime;
 use eyre::{Context, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct MqttConfig {
@@ -58,10 +58,31 @@ impl Default for PricesConfig {
     }
 }
 
+/// `[influxdb2]` (one target) or `[[influxdb2]]` (several, e.g. InfluxDB and
+/// a TimescaleDB relay that accepts the InfluxDB v2 write API).
+fn one_or_many<'de, D>(deserializer: D) -> Result<Vec<InfluxDB2Config>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum OneOrMany {
+        One(InfluxDB2Config),
+        Many(Vec<InfluxDB2Config>),
+    }
+
+    Ok(match OneOrMany::deserialize(deserializer)? {
+        OneOrMany::One(target) => vec![target],
+        OneOrMany::Many(targets) => targets,
+    })
+}
+
 #[derive(Deserialize, Debug, Clone)]
 pub struct Config {
     pub mqtt: MqttConfig,
-    pub influxdb2: Option<InfluxDB2Config>,
+    /// InfluxDB v2 write targets; new prices are written to each of them.
+    #[serde(default, deserialize_with = "one_or_many")]
+    pub influxdb2: Vec<InfluxDB2Config>,
     #[serde(default)]
     pub prices: PricesConfig,
 }
@@ -97,18 +118,19 @@ fn parse_config(builder: config::ConfigBuilder<config::builder::DefaultState>) -
 
     // The influxdb2 crate panics on invalid URLs, check them up front. Don't
     // refuse to start over this, publishing prices to MQTT is more important.
-    if let Some(influx) = &config.influxdb2 {
+    config.influxdb2.retain(|influx| {
         let valid = reqwest::Url::parse(&influx.host)
             .is_ok_and(|url| ["http", "https"].contains(&url.scheme()));
 
         if !valid {
             error!(
-                "Invalid influxdb2.host {:?}, expected e.g. \"https://influxdb.example.com\". InfluxDB writes are disabled.",
+                "Invalid influxdb2.host {:?}, expected e.g. \"https://influxdb.example.com\". Writes to it are disabled.",
                 influx.host
             );
-            config.influxdb2 = None;
         }
-    }
+
+        valid
+    });
 
     Ok(config)
 }
@@ -130,7 +152,8 @@ mod tests {
 
         assert_eq!(config.mqtt.id, "nordpool-mqtt");
         assert_eq!(config.mqtt.port, 1883);
-        assert_eq!(config.influxdb2.unwrap().bucket, "nordpool");
+        assert_eq!(config.influxdb2.len(), 1);
+        assert_eq!(config.influxdb2[0].bucket, "nordpool");
         assert_eq!(config.prices.area, "FI");
         assert_eq!(config.prices.resolution_minutes, 60);
         assert_eq!(
@@ -152,7 +175,7 @@ mod tests {
         )
         .unwrap();
 
-        assert!(config.influxdb2.is_none());
+        assert!(config.influxdb2.is_empty());
         assert_eq!(config.prices.vat_percent, 25.5);
     }
 
@@ -193,6 +216,47 @@ mod tests {
         )
         .unwrap();
 
-        assert!(config.influxdb2.is_none());
+        assert!(config.influxdb2.is_empty());
+    }
+
+    #[test]
+    fn parses_several_influxdb2_targets() {
+        let config = parse(
+            r#"
+            [mqtt]
+            id = "nordpool-mqtt"
+            host = "localhost"
+            port = 1883
+            topic = "sensors/nordpool/price"
+
+            [[influxdb2]]
+            host = "https://influxdb.example.com"
+            org = "org"
+            token = "token"
+            bucket = "nordpool"
+
+            [[influxdb2]]
+            host = "not a url"
+            org = "org"
+            token = "token"
+            bucket = "nordpool"
+
+            [[influxdb2]]
+            host = "http://relay.example.com:8086"
+            org = "org"
+            token = "other-token"
+            bucket = "nordpool"
+            "#,
+        )
+        .unwrap();
+
+        let hosts: Vec<_> = config.influxdb2.iter().map(|t| t.host.as_str()).collect();
+        assert_eq!(
+            hosts,
+            [
+                "https://influxdb.example.com",
+                "http://relay.example.com:8086"
+            ]
+        );
     }
 }
